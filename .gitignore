@@ -1,0 +1,12 @@
+models/
+data/
+logs/
+__pycache__/
+urdu_env/
+venv/
+*.docx
+*.html
+*.pdf
+.env
+remove_comments_script.py
+*.tsv
