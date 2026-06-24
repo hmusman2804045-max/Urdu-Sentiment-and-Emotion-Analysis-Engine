@@ -1,7 +1,10 @@
 import os 
+import sys 
 import torch 
 import numpy as np 
 from transformers import AutoTokenizer ,AutoModelForSequenceClassification 
+
+sys .stdout .reconfigure (encoding ='utf-8')
 
 def main ():
     print ("="*60 )
@@ -31,7 +34,7 @@ def main ():
         print (f"Error loading models. Are you sure they finished training? ({e })")
         return 
 
-    print ("\n✅ Models loaded successfully!")
+    print ("\nModels loaded successfully!")
     print ("Type an Urdu sentence (Roman or Script) to test them. Type 'exit' to quit.\n")
 
 
