@@ -10,3 +10,4 @@ venv/
 .env
 remove_comments_script.py
 *.tsv
+*.zip

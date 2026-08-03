@@ -1,0 +1,96 @@
+Phase 5 Evaluation Results
+Urdu Sentiment & Emotion Analysis Engine (XLM-RoBERTa)
+
+NOTE ON SENTIMENT LABELS
+The two sentiment sources encode 0/1/2 differently (Positive and Negative
+are swapped between them), so they are scored separately, each under its own
+label names. See the comment block in evaluation/evaluate_models.py.
+
+======================================================================
+  SENTIMENT MODEL - ROMAN URDU TEST SET
+======================================================================
+Model directory : models\sentiment_model
+Test files      : roman_urdu_sentiment_test.csv
+Test samples    : 2004
+Label order     : ['Positive', 'Negative', 'Neutral']
+
+Accuracy        : 0.6796
+Macro F1        : 0.6748
+Weighted F1     : 0.6816
+
+Classification report:
+              precision    recall  f1-score   support
+
+    Positive     0.6429    0.7027    0.6714       602
+    Negative     0.6013    0.6799    0.6382       528
+     Neutral     0.7744    0.6636    0.7147       874
+
+    accuracy                         0.6796      2004
+   macro avg     0.6729    0.6821    0.6748      2004
+weighted avg     0.6893    0.6796    0.6816      2004
+
+Confusion matrix (rows = true, columns = predicted):
+                Positive    Negative     Neutral
+    Positive         423          90          89
+    Negative          89         359          80
+     Neutral         146         148         580
+
+======================================================================
+  SENTIMENT MODEL - URDU SCRIPT TEST SET
+======================================================================
+Model directory : models\sentiment_model
+Test files      : urdu_sentiment_corpus_test.csv
+Test samples    : 100
+Label order     : ['Negative', 'Neutral', 'Positive']
+
+Accuracy        : 0.7200
+Macro F1        : 0.4848
+Weighted F1     : 0.7129
+
+Classification report:
+              precision    recall  f1-score   support
+
+    Negative     0.7400    0.7400    0.7400        50
+     Neutral     0.0000    0.0000    0.0000         2
+    Positive     0.7000    0.7292    0.7143        48
+
+    accuracy                         0.7200       100
+   macro avg     0.4800    0.4897    0.4848       100
+weighted avg     0.7060    0.7200    0.7129       100
+
+Confusion matrix (rows = true, columns = predicted):
+                Negative     Neutral    Positive
+    Negative          37           0          13
+     Neutral           0           0           2
+    Positive          13           0          35
+
+======================================================================
+  EMOTION MODEL
+======================================================================
+Model directory : models\emotion_model
+Test files      : semeval_emotion_test.csv
+Test samples    : 1002
+Label order     : ['Joy', 'Anger', 'Fear', 'Sadness']
+
+Accuracy        : 0.7246
+Macro F1        : 0.6029
+Weighted F1     : 0.7137
+
+Classification report:
+              precision    recall  f1-score   support
+
+         Joy     0.7829    0.8681    0.8233       432
+       Anger     0.7473    0.7639    0.7555       360
+        Fear     0.4487    0.3365    0.3846       104
+     Sadness     0.5325    0.3868    0.4481       106
+
+    accuracy                         0.7246      1002
+   macro avg     0.6278    0.5888    0.6029      1002
+weighted avg     0.7089    0.7246    0.7137      1002
+
+Confusion matrix (rows = true, columns = predicted):
+                     Joy       Anger        Fear     Sadness
+         Joy         375          34          12          11
+       Anger          46         275          23          16
+        Fear          26          34          35           9
+     Sadness          32          25           8          41

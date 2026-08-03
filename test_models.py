@@ -17,7 +17,7 @@ def main ():
 
 
 
-    sentiment_map ={0 :"Positive 😊",1 :"Negative 😠",2 :"Neutral 😐"}
+    sentiment_map ={0 :"Negative 😠",1 :"Neutral 😐",2 :"Positive 😊"}
     emotion_map ={0 :"Joy 😄",1 :"Anger 😡",2 :"Fear 😨",3 :"Sadness 😢"}
 
 

@@ -1,0 +1,7 @@
+Flask==3.0.3
+flask-cors==5.0.0
+torch
+transformers
+numpy
+pandas
+scikit-learn

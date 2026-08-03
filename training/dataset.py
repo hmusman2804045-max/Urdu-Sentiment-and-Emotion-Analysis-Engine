@@ -39,8 +39,8 @@ class UrduTextDataset (Dataset ):
 
             label_map ={
             'P':2 ,'O':1 ,'N':0 ,
-            2 :2 ,1 :1 ,0 :0 ,
-            '2':2 ,'1':1 ,'0':0 ,
+            0 :2 ,1 :0 ,2 :1 ,
+            '0':2 ,'1':0 ,'2':1 ,
             }
         elif task =="emotion":
 

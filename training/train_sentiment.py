@@ -43,7 +43,7 @@ class WeightedTrainer (Trainer ):
     def compute_loss (self ,model ,inputs ,return_outputs =False ,**kwargs ):
         labels =inputs .pop ("labels")
         outputs =model (**inputs )
-        weight =(self .class_weights .to (model .device )
+        weight =(self .class_weights .to (self .args .device )
         if self .class_weights is not None else None )
         loss_fn =nn .CrossEntropyLoss (
         weight =weight ,label_smoothing =self .label_smoothing )
