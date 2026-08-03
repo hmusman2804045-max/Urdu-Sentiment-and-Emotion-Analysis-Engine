@@ -11,3 +11,4 @@ venv/
 remove_comments_script.py
 *.tsv
 *.zip
+.claude/
