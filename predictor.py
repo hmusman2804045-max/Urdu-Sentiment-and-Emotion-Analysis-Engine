@@ -10,8 +10,11 @@ EMOTION_LABELS = ['Joy', 'Anger', 'Fear', 'Sadness']
 class SentimentEmotionPredictor:
     def __init__(self):
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.sentiment_dir = os.path.join(base_dir, "models", "sentiment_model")
-        self.emotion_dir = os.path.join(base_dir, "models", "emotion_model")
+        local_sentiment = os.path.join(base_dir, "models", "sentiment_model")
+        local_emotion = os.path.join(base_dir, "models", "emotion_model")
+
+        self.sentiment_path = local_sentiment if os.path.exists(local_sentiment) else "usman-ai-dev/urdu-sentiment-xlmr"
+        self.emotion_path = local_emotion if os.path.exists(local_emotion) else "usman-ai-dev/urdu-emotion-xlmr"
 
         self.sentiment_map = {0: "Negative", 1: "Neutral", 2: "Positive"}
         self.emotion_map = {0: "Joy", 1: "Anger", 2: "Fear", 3: "Sadness"}
@@ -23,15 +26,15 @@ class SentimentEmotionPredictor:
         self.load_models()
 
     def load_models(self):
-        print("Loading Tokenizer...")
-        self.tokenizer = AutoTokenizer.from_pretrained(self.sentiment_dir)
+        print(f"Loading Tokenizer from '{self.sentiment_path}'...")
+        self.tokenizer = AutoTokenizer.from_pretrained(self.sentiment_path)
 
-        print("Loading Sentiment Model...")
-        self.sentiment_model = AutoModelForSequenceClassification.from_pretrained(self.sentiment_dir)
+        print(f"Loading Sentiment Model from '{self.sentiment_path}'...")
+        self.sentiment_model = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
         self.sentiment_model.eval()
 
-        print("Loading Emotion Model...")
-        self.emotion_model = AutoModelForSequenceClassification.from_pretrained(self.emotion_dir)
+        print(f"Loading Emotion Model from '{self.emotion_path}'...")
+        self.emotion_model = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
         self.emotion_model.eval()
 
         print("Models loaded into memory successfully!")
