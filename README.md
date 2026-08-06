@@ -1,22 +1,9 @@
----
-title: Urdu Sentiment and Emotion Engine
-emoji: 🇵🇰
-colorFrom: violet
-colorTo: blue
-sdk: gradio
-sdk_version: 4.44.0
-app_file: gradio_app.py
-pinned: true
-license: apache-2.0
-short_description: XLM-RoBERTa fine-tuned for Urdu & Roman Urdu sentiment + emotion
----
-
 # Urdu Sentiment and Emotion Analysis Engine
 
 Welcome to the Urdu Sentiment and Emotion Analysis Engine project! This repository contains the code for a multilingual NLP system that classifies sentiment (Positive, Negative, Neutral) and emotion (Joy, Anger, Fear, Sadness) from Urdu, Roman Urdu, and mixed-language text using a fine-tuned XLM-RoBERTa transformer.
 
-## Current Progress: Phase 7 (Frontend UI & Dashboard Complete)
-The project has successfully completed Phases 1 through 7. The AI models are fully trained and integrated into a production-ready **FastAPI** web server with Uvicorn. The frontend features a dark-mode Glassmorphism dashboard with an interactive 3D WebGL Three.js particle wave background, floating ambient glowing orbs, real-time cursor spotlight, Chart.js analytics, and automated live tweet feed streaming.
+## Current Progress: Phase 9 (Modal.com Deployment — In Progress)
+The project has successfully completed Phases 1 through 8. The AI models are fully trained, uploaded to Hugging Face Hub (`usman-ai-dev/urdu-sentiment-xlmr` & `usman-ai-dev/urdu-emotion-xlmr`), and integrated into a production-ready **FastAPI** web server with Uvicorn. The frontend features a dark-mode Glassmorphism dashboard with an interactive 3D WebGL Three.js particle wave background, floating ambient glowing orbs, real-time cursor spotlight, Chart.js analytics, and automated live tweet feed streaming. Phase 9 deploys the full stack to **Modal.com** with a custom domain (`urdu-ai.hmuhammadusman.com`).
 
 ### Repository Structure
 - `app.py`: FastAPI Web Server exposing all REST API routes (`/analyze`, `/analytics`, `/detect-language`, `/live-feed`, `/health`).
@@ -28,6 +15,7 @@ The project has successfully completed Phases 1 through 7. The AI models are ful
   - `js/bg3d.js`: Three.js 3D WebGL particle wave and floating embers motion engine.
   - `js/main.js`: Interactivity handlers, GSAP timelines, Chart.js charts, and FastAPI endpoint fetch calls.
 - `upload_to_hub.py`: Automated model upload script for Hugging Face Hub integration.
+- `modal_app.py`: Modal.com deployment entrypoint — wraps FastAPI app for serverless cloud deployment.
 - `requirements.txt`: Environment dependencies required for training and the FastAPI server.
 - `Dockerfile`: Container configuration configured to run FastAPI with Uvicorn on port 7860.
 - `test_models.py`: Utility script to run interactive CLI inference without starting the server.
@@ -75,6 +63,9 @@ The server will boot up and listen on `http://127.0.0.1:5000`.
 | `GET` | `/health` | Health check endpoint for Docker / deployment monitors |
 | `GET` | `/docs` | Interactive Swagger API documentation UI |
 
-### Next Steps (Phase 8 & 9)
-- **Phase 8**: Push trained models to Hugging Face Hub (`upload_to_hub.py`) & update `predictor.py`.
-- **Phase 9**: Containerize with Docker and deploy live to Hugging Face Spaces.
+### Deployment (Phase 9 — Modal.com)
+- **Phase 8** ✅: Models pushed to Hugging Face Hub. `predictor.py` updated to load from Hub.
+- **Phase 9**: Deploy full FastAPI stack to **Modal.com** (free $30/month credit tier).
+  - Run: `modal deploy modal_app.py`
+  - Custom domain: `urdu-ai.hmuhammadusman.com`
+  - GitHub Actions auto-deploys on every push to `main`.

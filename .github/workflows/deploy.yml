@@ -1,4 +1,4 @@
-name: Deploy to HuggingFace Spaces
+name: Deploy to Modal.com
 
 on:
   push:
@@ -7,21 +7,23 @@ on:
 
 jobs:
   deploy:
-    name: Push to HuggingFace Spaces (Gradio)
+    name: Deploy FastAPI to Modal.com
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout GitHub Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          lfs: true
 
-      - name: Push to HuggingFace Gradio Space
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Modal CLI
+        run: pip install modal
+
+      - name: Deploy to Modal
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          git config --global user.email "ci@github-actions.com"
-          git config --global user.name "GitHub Actions"
-          git remote add hfspace https://hmusman2804045-max:$HF_TOKEN@huggingface.co/spaces/hmusman2804045-max/urdu-sentiment-engine
-          git push hfspace main --force
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: modal deploy modal_app.py
