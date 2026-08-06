@@ -2,16 +2,18 @@
 
 Welcome to the Urdu Sentiment and Emotion Analysis Engine project! This repository contains the code for a multilingual NLP system that classifies sentiment (Positive, Negative, Neutral) and emotion (Joy, Anger, Fear, Sadness) from Urdu, Roman Urdu, and mixed-language text using a fine-tuned XLM-RoBERTa transformer.
 
-## Current Progress: Phase 5 (Backend Complete)
-The project has successfully completed Phases 1 through 5. The models have been fully trained on GPU clusters, critical label-mapping alignments have been applied across Urdu/Roman datasets, and the models are now integrated into a functional REST API using FastAPI + Uvicorn.
+## Current Progress: Phase 6 (FastAPI Backend & API Routes Complete)
+The project has successfully completed Phases 1 through 6. The AI models are fully trained and integrated into a production-ready **FastAPI** web server with Uvicorn. The backend features automatic request validation via Pydantic, language detection, word-level attention scoring, session analytics, and interactive Swagger API documentation at `/docs`.
 
 ### Repository Structure
-- `app.py`: The FastAPI Web Server that exposes the `/predict` REST API endpoint.
-- `predictor.py`: Object-Oriented class handling the safe loading and inference of the XLM-RoBERTa models.
-- `requirements.txt`: Environment dependencies required for training and the web server.
-- `test_models.py`: A utility script to run interactive CLI inference without starting the server.
-- `training/`: Contains the core scripts for data processing and model fine-tuning.
-  - `dataset.py`: PyTorch `Dataset` implementation for loading and tokenizing text, now utilizing unified canonical label mappings.
+- `app.py`: FastAPI Web Server exposing all REST API routes (`/analyze`, `/analytics`, `/detect-language`, `/live-feed`, `/health`).
+- `predictor.py`: Object-Oriented class handling model loading, Softmax probability scoring, and subword attention extraction.
+- `lang_detector.py`: Language identification module for Urdu Script, Roman Urdu, English, and Mixed text.
+- `requirements.txt`: Environment dependencies required for training and the FastAPI server.
+- `Dockerfile`: Container configuration configured to run FastAPI with Uvicorn on port 7860.
+- `test_models.py`: Utility script to run interactive CLI inference without starting the server.
+- `training/`: Core scripts for data processing and model fine-tuning.
+  - `dataset.py`: PyTorch `Dataset` implementation utilizing unified canonical label mappings.
   - `train_sentiment.py`: Training script for the sentiment classification model (Multi-GPU enabled).
   - `train_emotion.py`: Training script for the emotion classification model (Multi-GPU enabled).
 - `evaluation/`: Scripts for evaluating model performance and generating attention visualizations.
@@ -37,11 +39,22 @@ pip install -r requirements.txt
 ```
 
 ### Running the API Server
-To start the backend server and test predictions:
+To start the backend server:
 ```bash
 python app.py
 ```
-The server will boot up and listen on `http://127.0.0.1:5000`. You can send POST requests to `/predict` containing `{"text": "your urdu text"}` to receive JSON sentiment/emotion scores.
+The server will boot up and listen on `http://127.0.0.1:5000`.
 
-### Next Steps (Phase 6)
-The upcoming Phase 6 will involve building the UI/Frontend (HTML/CSS/JS) to interact beautifully with the `app.py` backend!
+### Available API Routes:
+| Method | Route | Description |
+| --- | --- | --- |
+| `GET` | `/` | Serves main landing dashboard HTML page / status view |
+| `POST` | `/analyze` | Main prediction endpoint — accepts `{"text": "..."}` and returns sentiment, emotion, confidence distributions, language type, and word attention |
+| `GET` | `/analytics` | Returns session analytics — total texts, sentiment breakdown, emotion counts, and top keywords |
+| `POST` | `/detect-language` | Accepts `{"text": "..."}` and returns detected language (`Urdu Script`, `Roman Urdu`, `English`, `Mixed`) |
+| `GET` | `/live-feed` | Streams simulated real-time tweet feed predictions |
+| `GET` | `/health` | Health check endpoint for Docker / deployment monitors |
+| `GET` | `/docs` | Interactive Swagger API documentation UI |
+
+### Next Steps (Phase 7)
+The upcoming Phase 7 will involve building the UI/Frontend dashboard (HTML/CSS/JS with Glassmorphism aesthetics) to interact with the FastAPI backend routes.
