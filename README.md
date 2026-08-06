@@ -2,13 +2,19 @@
 
 Welcome to the Urdu Sentiment and Emotion Analysis Engine project! This repository contains the code for a multilingual NLP system that classifies sentiment (Positive, Negative, Neutral) and emotion (Joy, Anger, Fear, Sadness) from Urdu, Roman Urdu, and mixed-language text using a fine-tuned XLM-RoBERTa transformer.
 
-## Current Progress: Phase 6 (FastAPI Backend & API Routes Complete)
-The project has successfully completed Phases 1 through 6. The AI models are fully trained and integrated into a production-ready **FastAPI** web server with Uvicorn. The backend features automatic request validation via Pydantic, language detection, word-level attention scoring, session analytics, and interactive Swagger API documentation at `/docs`.
+## Current Progress: Phase 7 (Frontend UI & Dashboard Complete)
+The project has successfully completed Phases 1 through 7. The AI models are fully trained and integrated into a production-ready **FastAPI** web server with Uvicorn. The frontend features a dark-mode Glassmorphism dashboard with an interactive 3D WebGL Three.js particle wave background, floating ambient glowing orbs, real-time cursor spotlight, Chart.js analytics, and automated live tweet feed streaming.
 
 ### Repository Structure
 - `app.py`: FastAPI Web Server exposing all REST API routes (`/analyze`, `/analytics`, `/detect-language`, `/live-feed`, `/health`).
 - `predictor.py`: Object-Oriented class handling model loading, Softmax probability scoring, and subword attention extraction.
 - `lang_detector.py`: Language identification module for Urdu Script, Roman Urdu, English, and Mixed text.
+- `templates/index.html`: Main dashboard HTML template.
+- `static/`: Frontend visual assets:
+  - `css/style.css`: Glassmorphism design system, dark theme tokens, and dynamic background glow animations.
+  - `js/bg3d.js`: Three.js 3D WebGL particle wave and floating embers motion engine.
+  - `js/main.js`: Interactivity handlers, GSAP timelines, Chart.js charts, and FastAPI endpoint fetch calls.
+- `upload_to_hub.py`: Automated model upload script for Hugging Face Hub integration.
 - `requirements.txt`: Environment dependencies required for training and the FastAPI server.
 - `Dockerfile`: Container configuration configured to run FastAPI with Uvicorn on port 7860.
 - `test_models.py`: Utility script to run interactive CLI inference without starting the server.
@@ -19,7 +25,7 @@ The project has successfully completed Phases 1 through 6. The AI models are ful
 - `evaluation/`: Scripts for evaluating model performance and generating attention visualizations.
 - `results/`: Contains output matrices and evaluation reports.
 
-*(Note: The `models/` directory containing the 1GB `.safetensors` files is ignored via `.gitignore` due to size constraints. The models must be downloaded from the training environment and placed locally to run the API.)*
+*(Note: The `models/` directory containing the 1GB `.safetensors` files is ignored via `.gitignore` due to size constraints. The models will be hosted on Hugging Face Hub for cloud deployment.)*
 
 ### Environment Setup
 To get started, create a virtual environment and install the required dependencies:
@@ -48,7 +54,7 @@ The server will boot up and listen on `http://127.0.0.1:5000`.
 ### Available API Routes:
 | Method | Route | Description |
 | --- | --- | --- |
-| `GET` | `/` | Serves main landing dashboard HTML page / status view |
+| `GET` | `/` | Serves main landing dashboard HTML page |
 | `POST` | `/analyze` | Main prediction endpoint — accepts `{"text": "..."}` and returns sentiment, emotion, confidence distributions, language type, and word attention |
 | `GET` | `/analytics` | Returns session analytics — total texts, sentiment breakdown, emotion counts, and top keywords |
 | `POST` | `/detect-language` | Accepts `{"text": "..."}` and returns detected language (`Urdu Script`, `Roman Urdu`, `English`, `Mixed`) |
@@ -56,5 +62,6 @@ The server will boot up and listen on `http://127.0.0.1:5000`.
 | `GET` | `/health` | Health check endpoint for Docker / deployment monitors |
 | `GET` | `/docs` | Interactive Swagger API documentation UI |
 
-### Next Steps (Phase 7)
-The upcoming Phase 7 will involve building the UI/Frontend dashboard (HTML/CSS/JS with Glassmorphism aesthetics) to interact with the FastAPI backend routes.
+### Next Steps (Phase 8 & 9)
+- **Phase 8**: Push trained models to Hugging Face Hub (`upload_to_hub.py`) & update `predictor.py`.
+- **Phase 9**: Containerize with Docker and deploy live to Hugging Face Spaces.

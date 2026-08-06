@@ -4,9 +4,14 @@ from collections import Counter
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from predictor import SentimentEmotionPredictor
 from lang_detector import detect_language
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
 app = FastAPI(
     title="Urdu Sentiment & Emotion Analysis Engine",
@@ -21,6 +26,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 print("Initializing AI Engine...")
 engine = SentimentEmotionPredictor()
@@ -66,7 +74,7 @@ def update_analytics(result, lang):
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    index_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
+    index_path = os.path.join(TEMPLATES_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return """

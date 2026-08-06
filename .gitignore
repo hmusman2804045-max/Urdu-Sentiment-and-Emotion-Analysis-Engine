@@ -6,6 +6,7 @@ urdu_env/
 venv/
 *.docx
 *.html
+!templates/*.html
 *.pdf
 .env
 remove_comments_script.py

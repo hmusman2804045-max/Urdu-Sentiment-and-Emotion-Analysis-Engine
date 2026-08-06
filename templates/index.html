@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Urdu Sentiment &amp; Emotion Analysis Engine — multilingual sentiment, emotion and attention analysis for Urdu Script, Roman Urdu and Mixed text." />
+<meta name="color-scheme" content="dark" />
+<title>Urdu Sentiment &amp; Emotion Analysis Engine</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/static/css/style.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+
+<!-- ============ AMBIENT BACKGROUND STACK (paints below .shell) ============ -->
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+<div class="ambient-glows" aria-hidden="true">
+  <span class="glow-orb glow-orb--indigo"></span>
+  <span class="glow-orb glow-orb--cyan"></span>
+  <span class="glow-orb glow-orb--violet"></span>
+</div>
+
+<div class="bg-vignette" aria-hidden="true"></div>
+<div class="mouse-spotlight" id="mouse-spotlight" aria-hidden="true"></div>
+
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<div class="shell">
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="site-header glass" id="site-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3a4 4 0 0 0-4 4 3.5 3.5 0 0 0-2 6.3A3.5 3.5 0 0 0 9 20a3 3 0 0 0 3-1.8" />
+          <path d="M12 3a4 4 0 0 1 4 4 3.5 3.5 0 0 1 2 6.3A3.5 3.5 0 0 1 15 20a3 3 0 0 1-3-1.8" />
+          <path d="M12 7v12" />
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>Urdu Sentiment &amp; Emotion Engine</strong>
+        <small>XLM-RoBERTa · Urdu Script · Roman Urdu · Mixed</small>
+      </span>
+    </div>
+
+    <div class="header-actions">
+      <span class="status-badge" id="health-badge" role="status" aria-live="polite" data-state="checking">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-text" id="health-text">Checking…</span>
+      </span>
+      <button type="button" class="icon-btn" id="health-refresh" title="Re-check API health" aria-label="Re-check API health">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero" id="hero">
+    <h1 class="hero-title">Understand the <em>feeling</em> behind every sentence.</h1>
+    <p class="hero-sub">
+      Transformer-powered sentiment, emotion and attention analysis for Urdu script,
+      Roman Urdu and code-mixed text — running fully on your local inference server.
+    </p>
+  </section>
+
+  <!-- ===================== TABS ===================== -->
+  <nav class="tabs glass" role="tablist" aria-label="Dashboard sections">
+    <button class="tab is-active" role="tab" id="tab-analysis" aria-controls="panel-analysis" aria-selected="true" data-panel="panel-analysis" type="button">
+      <span class="tab-ico" aria-hidden="true">◆</span> Analysis
+    </button>
+    <button class="tab" role="tab" id="tab-analytics" aria-controls="panel-analytics" aria-selected="false" tabindex="-1" data-panel="panel-analytics" type="button">
+      <span class="tab-ico" aria-hidden="true">▤</span> Analytics
+    </button>
+    <button class="tab" role="tab" id="tab-live" aria-controls="panel-live" aria-selected="false" tabindex="-1" data-panel="panel-live" type="button">
+      <span class="tab-ico" aria-hidden="true">◈</span> Live Feed
+    </button>
+    <span class="tab-indicator" aria-hidden="true"></span>
+  </nav>
+
+  <main id="main-content">
+
+    <!-- ===================== PANEL: ANALYSIS ===================== -->
+    <section class="panel is-active" id="panel-analysis" role="tabpanel" aria-labelledby="tab-analysis" tabindex="0">
+
+      <article class="card glass reveal" id="composer-card">
+        <header class="card-head">
+          <h2 class="card-title">Compose &amp; Analyze</h2>
+          <div class="card-head-tools">
+            <span class="chip chip-lang" id="lang-badge" data-lang="unknown" aria-live="polite">Language: —</span>
+            <button type="button" class="chip chip-toggle" id="rtl-toggle" aria-pressed="false" title="Toggle text direction">
+              <span id="rtl-toggle-label">LTR</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="card-body">
+          <label class="sr-only" for="input-text">Text to analyze</label>
+          <textarea
+            id="input-text"
+            class="text-input"
+            rows="5"
+            maxlength="1000"
+            spellcheck="false"
+            placeholder="اردو، Roman Urdu یا mixed text لکھیں…  /  Type Urdu, Roman Urdu or mixed text here…"></textarea>
+
+          <div class="composer-foot">
+            <div class="samples" aria-label="Sample inputs">
+              <span class="samples-label">Try:</span>
+              <button type="button" class="chip chip-sample" data-sample="یہ پروڈکٹ بہت عمدہ ہے اور مجھے بہت پسند آئی۔">Urdu Script</button>
+              <button type="button" class="chip chip-sample" data-sample="yeh service bohat hi ghatiya thi, mera mood kharab ho gaya">Roman Urdu</button>
+              <button type="button" class="chip chip-sample" data-sample="The delivery was late لیکن product بہت اچھا ہے">Mixed</button>
+            </div>
+            <span class="char-count" id="char-count" aria-live="polite">0 / 1000</span>
+          </div>
+
+          <div class="composer-actions">
+            <button type="button" class="btn btn-primary" id="analyze-btn">
+              <span class="btn-spinner" aria-hidden="true"></span>
+              <span class="btn-label">Analyze Text</span>
+            </button>
+            <button type="button" class="btn btn-ghost" id="clear-btn">Clear</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Empty state -->
+      <div class="empty-state glass reveal" id="analysis-empty">
+        <div class="empty-ico" aria-hidden="true">◇</div>
+        <p>No analysis yet. Enter some text above and press <strong>Analyze Text</strong>.</p>
+      </div>
+
+      <!-- Results -->
+      <div class="results-grid" id="results-grid" hidden>
+
+        <article class="card glass result-card" id="sentiment-card">
+          <header class="card-head">
+            <h2 class="card-title">Sentiment</h2>
+            <span class="chip chip-verdict" id="sentiment-verdict">—</span>
+          </header>
+          <div class="card-body">
+            <div class="verdict-block">
+              <span class="verdict-value" id="sentiment-confidence">0%</span>
+              <span class="verdict-caption">model confidence</span>
+            </div>
+            <div class="bars" id="sentiment-bars"></div>
+          </div>
+        </article>
+
+        <article class="card glass result-card" id="emotion-card">
+          <header class="card-head">
+            <h2 class="card-title">Emotion</h2>
+            <span class="chip chip-verdict" id="emotion-verdict">—</span>
+          </header>
+          <div class="card-body">
+            <div class="verdict-block">
+              <span class="verdict-value" id="emotion-confidence">0%</span>
+              <span class="verdict-caption">model confidence</span>
+            </div>
+            <div class="bars" id="emotion-bars"></div>
+          </div>
+        </article>
+
+        <article class="card glass result-card span-2" id="attention-card">
+          <header class="card-head">
+            <h2 class="card-title">Attention Highlighter</h2>
+            <span class="card-hint">Token intensity ∝ last-layer <code>[CLS]</code> attention</span>
+          </header>
+          <div class="card-body">
+            <div class="attention-tokens" id="attention-tokens"></div>
+            <div class="attention-legend" aria-hidden="true">
+              <span class="legend-label">low</span>
+              <span class="legend-ramp" id="legend-ramp"></span>
+              <span class="legend-label">high</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ===================== PANEL: ANALYTICS ===================== -->
+    <section class="panel" id="panel-analytics" role="tabpanel" aria-labelledby="tab-analytics" tabindex="0" hidden>
+
+      <div class="stat-row">
+        <article class="card glass stat-card reveal">
+          <span class="stat-label">Total Analyzed</span>
+          <span class="stat-value" id="stat-total">0</span>
+        </article>
+        <article class="card glass stat-card reveal">
+          <span class="stat-label">Dominant Sentiment</span>
+          <span class="stat-value" id="stat-sentiment">—</span>
+        </article>
+        <article class="card glass stat-card reveal">
+          <span class="stat-label">Dominant Emotion</span>
+          <span class="stat-value" id="stat-emotion">—</span>
+        </article>
+        <button type="button" class="btn btn-ghost stat-refresh" id="analytics-refresh">Refresh</button>
+      </div>
+
+      <div class="results-grid">
+        <article class="card glass reveal">
+          <header class="card-head">
+            <h2 class="card-title">Sentiment Distribution</h2>
+          </header>
+          <div class="card-body">
+            <div class="chart-wrap">
+              <canvas id="sentiment-chart" role="img" aria-label="Donut chart of sentiment distribution"></canvas>
+            </div>
+          </div>
+        </article>
+
+        <article class="card glass reveal">
+          <header class="card-head">
+            <h2 class="card-title">Emotion Counts</h2>
+          </header>
+          <div class="card-body">
+            <div class="chart-wrap">
+              <canvas id="emotion-chart" role="img" aria-label="Bar chart of emotion counts"></canvas>
+            </div>
+          </div>
+        </article>
+
+        <article class="card glass span-2 reveal">
+          <header class="card-head">
+            <h2 class="card-title">Top 10 Keywords</h2>
+            <span class="card-hint">Sized by session frequency</span>
+          </header>
+          <div class="card-body">
+            <div class="tag-cloud" id="keyword-cloud"></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===================== PANEL: LIVE FEED ===================== -->
+    <section class="panel" id="panel-live" role="tabpanel" aria-labelledby="tab-live" tabindex="0" hidden>
+      <article class="card glass reveal">
+        <header class="card-head">
+          <h2 class="card-title">Simulated Stream</h2>
+          <div class="card-head-tools">
+            <label class="sr-only" for="live-interval">Stream interval</label>
+            <select class="select" id="live-interval">
+              <option value="2000">Every 2s</option>
+              <option value="3500" selected>Every 3.5s</option>
+              <option value="6000">Every 6s</option>
+            </select>
+            <button type="button" class="btn btn-primary btn-sm" id="live-toggle">Start Stream</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="live-clear">Clear</button>
+          </div>
+        </header>
+        <div class="card-body">
+          <p class="live-meta">
+            <span class="live-pulse" id="live-pulse" data-on="false" aria-hidden="true"></span>
+            <span id="live-status">Idle</span> · <span id="live-count">0</span> items received
+          </p>
+          <div class="feed" id="live-feed"></div>
+        </div>
+      </article>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <span>Phase 7 · Frontend UI &amp; Dashboard</span>
+    <span class="dot" aria-hidden="true">·</span>
+    <span>FastAPI backend at <code id="api-origin">—</code></span>
+  </footer>
+</div>
+
+<div class="toast-stack" id="toast-stack" role="region" aria-live="polite" aria-label="Notifications"></div>
+
+<noscript>
+  <div class="noscript-banner">This dashboard requires JavaScript to communicate with the analysis API.</div>
+</noscript>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="/static/js/bg3d.js" defer></script>
+<script src="/static/js/main.js" defer></script>
+</body>
+</html>
