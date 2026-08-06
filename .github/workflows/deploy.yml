@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Push to HuggingFace Spaces
+    name: Push to HuggingFace Spaces (Gradio)
     runs-on: ubuntu-latest
 
     steps:
@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Push to HuggingFace Space
+      - name: Push to HuggingFace Gradio Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
