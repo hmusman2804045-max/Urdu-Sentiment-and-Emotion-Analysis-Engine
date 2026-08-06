@@ -3,10 +3,10 @@
 Welcome to the Urdu Sentiment and Emotion Analysis Engine project! This repository contains the code for a multilingual NLP system that classifies sentiment (Positive, Negative, Neutral) and emotion (Joy, Anger, Fear, Sadness) from Urdu, Roman Urdu, and mixed-language text using a fine-tuned XLM-RoBERTa transformer.
 
 ## Current Progress: Phase 5 (Backend Complete)
-The project has successfully completed Phases 1 through 5. The models have been fully trained on GPU clusters, critical label-mapping alignments have been applied across Urdu/Roman datasets, and the models are now integrated into a functional REST API using Flask.
+The project has successfully completed Phases 1 through 5. The models have been fully trained on GPU clusters, critical label-mapping alignments have been applied across Urdu/Roman datasets, and the models are now integrated into a functional REST API using FastAPI + Uvicorn.
 
 ### Repository Structure
-- `app.py`: The Flask Web Server that exposes the `/predict` REST API endpoint.
+- `app.py`: The FastAPI Web Server that exposes the `/predict` REST API endpoint.
 - `predictor.py`: Object-Oriented class handling the safe loading and inference of the XLM-RoBERTa models.
 - `requirements.txt`: Environment dependencies required for training and the web server.
 - `test_models.py`: A utility script to run interactive CLI inference without starting the server.

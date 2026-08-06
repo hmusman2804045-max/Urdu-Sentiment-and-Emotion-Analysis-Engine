@@ -16,7 +16,7 @@ class UrduTextDataset (Dataset ):
         Args:
             csv_paths (list or str): Path(s) to the cleaned CSV files.
             tokenizer: HuggingFace tokenizer (XLM-RoBERTa).
-            max_length (int): Max token length for truncation.
+            max_length (int): Max token length for truncation. 
             task (str): 'sentiment' or 'emotion'.
         """
         self .tokenizer =tokenizer 
