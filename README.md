@@ -3,7 +3,7 @@
 Welcome to the Urdu Sentiment and Emotion Analysis Engine project! This repository contains the code for a multilingual NLP system that classifies sentiment (Positive, Negative, Neutral) and emotion (Joy, Anger, Fear, Sadness) from Urdu, Roman Urdu, and mixed-language text using a fine-tuned XLM-RoBERTa transformer.
 
 ## Current Progress: Phase 9 (Modal.com Deployment — In Progress)
-The project has successfully completed Phases 1 through 8. The AI models are fully trained, uploaded to Hugging Face Hub (`usman-ai-dev/urdu-sentiment-xlmr` & `usman-ai-dev/urdu-emotion-xlmr`), and integrated into a production-ready **FastAPI** web server with Uvicorn. The frontend features a dark-mode Glassmorphism dashboard with an interactive 3D WebGL Three.js particle wave background, floating ambient glowing orbs, real-time cursor spotlight, Chart.js analytics, and automated live tweet feed streaming. Phase 9 deploys the full stack to **Modal.com** with a custom domain (`urdu-ai.hmuhammadusman.com`).
+The project has successfully completed Phases 1 through 8. The AI models are fully trained, uploaded to Hugging Face Hub (`usman-ai-dev/urdu-sentiment-xlmr` & `usman-ai-dev/urdu-emotion-xlmr`), and integrated into a production-ready **FastAPI** web server with Uvicorn. The frontend features a dark-mode Glassmorphism dashboard with an interactive 3D WebGL Three.js particle wave background, floating ambient glowing orbs, real-time cursor spotlight, Chart.js analytics, and automated live tweet feed streaming. Phase 9 deploys the full stack to **Modal.com** with a custom domain (`urdu-sentiment.hmuhammadusman.com`).
 
 ### Repository Structure
 - `app.py`: FastAPI Web Server exposing all REST API routes (`/analyze`, `/analytics`, `/detect-language`, `/live-feed`, `/health`).
@@ -67,5 +67,5 @@ The server will boot up and listen on `http://127.0.0.1:5000`.
 - **Phase 8** ✅: Models pushed to Hugging Face Hub. `predictor.py` updated to load from Hub.
 - **Phase 9**: Deploy full FastAPI stack to **Modal.com** (free $30/month credit tier).
   - Run: `modal deploy modal_app.py`
-  - Custom domain: `urdu-ai.hmuhammadusman.com`
+  - Custom domain: `urdu-sentiment.hmuhammadusman.com`
   - GitHub Actions auto-deploys on every push to `main`.
