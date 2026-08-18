@@ -15,8 +15,9 @@ pinned: false
 
 Welcome to the Urdu Sentiment and Emotion Analysis Engine project! This repository contains the code for a multilingual NLP system that classifies sentiment (Positive, Negative, Neutral) and emotion (Joy, Anger, Fear, Sadness) from Urdu, Roman Urdu, and mixed-language text using a fine-tuned XLM-RoBERTa transformer.
 
-## Current Progress: Phase 9 (Modal.com Deployment — In Progress)
-The project has successfully completed Phases 1 through 8. The AI models are fully trained, uploaded to Hugging Face Hub (`usman-ai-dev/urdu-sentiment-xlmr` & `usman-ai-dev/urdu-emotion-xlmr`), and integrated into a production-ready **FastAPI** web server with Uvicorn. The frontend features a dark-mode Glassmorphism dashboard with an interactive 3D WebGL Three.js particle wave background, floating ambient glowing orbs, real-time cursor spotlight, Chart.js analytics, and automated live tweet feed streaming. Phase 9 deploys the full stack to **Modal.com** with a custom domain (`urdu-sentiment.hmuhammadusman.com`).
+## Current Progress: Phase 9 (Render Cloud Deployment — Active)
+The project has successfully completed Phases 1 through 9. The AI models are fully trained, uploaded to Hugging Face Hub (`usman-ai-dev/urdu-sentiment-xlmr` & `usman-ai-dev/urdu-emotion-xlmr`), and integrated into a production-ready **FastAPI** web server with Uvicorn. The frontend features a dark-mode Glassmorphism dashboard with an interactive 3D WebGL Three.js particle wave background, floating ambient glowing orbs, real-time cursor spotlight, Chart.js analytics, and automated live tweet feed streaming. Phase 9 deploys the full stack with **INT8 Dynamic Quantization** to **Render.com** mapped to a custom domain (`urdu-sentiment.hmuhammadusman.com`).
+
 
 ### Repository Structure
 - `app.py`: FastAPI Web Server exposing all REST API routes (`/analyze`, `/analytics`, `/detect-language`, `/live-feed`, `/health`).
@@ -76,9 +77,10 @@ The server will boot up and listen on `http://127.0.0.1:5000`.
 | `GET` | `/health` | Health check endpoint for Docker / deployment monitors |
 | `GET` | `/docs` | Interactive Swagger API documentation UI |
 
-### Deployment (Phase 9 — Modal.com)
-- **Phase 8** ✅: Models pushed to Hugging Face Hub. `predictor.py` updated to load from Hub.
-- **Phase 9**: Deploy full FastAPI stack to **Modal.com** (free $30/month credit tier).
-  - Run: `modal deploy modal_app.py`
-  - Custom domain: `urdu-sentiment.hmuhammadusman.com`
-  - GitHub Actions auto-deploys on every push to `main`.
+### Deployment (Phase 9 — Render & Cloudflare)
+- **Phase 8** ✅: Models pushed to Hugging Face Hub (`usman-ai-dev/urdu-sentiment-xlmr` & `usman-ai-dev/urdu-emotion-xlmr`).
+- **Phase 9** ✅: Deployed full FastAPI stack with INT8 quantization to **Render.com** mapped to custom domain (`urdu-sentiment.hmuhammadusman.com`).
+  - Render URL: `https://urdu-sentiment-and-emotion-analysis.onrender.com`
+  - Custom domain: `https://urdu-sentiment.hmuhammadusman.com`
+  - GitHub auto-deploys on every push to `main`.
+
