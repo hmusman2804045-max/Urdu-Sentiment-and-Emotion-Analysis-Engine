@@ -20,8 +20,10 @@ COPY . .
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# HuggingFace Spaces requires port 7860
+# Default PORT for local/HuggingFace, overridden dynamically by cloud providers like Render
+ENV PORT=7860
 EXPOSE 7860
 
-# Start FastAPI with Uvicorn
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+# Start FastAPI with Uvicorn using dynamic $PORT
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-7860}"]
+
