@@ -29,15 +29,22 @@ class SentimentEmotionPredictor:
         print(f"Loading Tokenizer from '{self.sentiment_path}'...")
         self.tokenizer = AutoTokenizer.from_pretrained(self.sentiment_path)
 
-        print(f"Loading Sentiment Model from '{self.sentiment_path}'...")
-        self.sentiment_model = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
+        print(f"Loading & Quantizing Sentiment Model (INT8) from '{self.sentiment_path}'...")
+        raw_sentiment = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
+        self.sentiment_model = torch.quantization.quantize_dynamic(
+            raw_sentiment, {torch.nn.Linear}, dtype=torch.qint8
+        )
         self.sentiment_model.eval()
 
-        print(f"Loading Emotion Model from '{self.emotion_path}'...")
-        self.emotion_model = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
+        print(f"Loading & Quantizing Emotion Model (INT8) from '{self.emotion_path}'...")
+        raw_emotion = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
+        self.emotion_model = torch.quantization.quantize_dynamic(
+            raw_emotion, {torch.nn.Linear}, dtype=torch.qint8
+        )
         self.emotion_model.eval()
 
-        print("Models loaded into memory successfully!")
+        print("Models loaded and quantized into INT8 memory successfully!")
+
 
     def get_word_attention(self, text):
         inputs = self.tokenizer(text, return_tensors="pt", max_length=128, truncation=True)
