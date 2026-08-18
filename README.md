@@ -1,6 +1,7 @@
 ---
 title: Urdu Sentiment & Emotion Analysis Engine
-emoji: 🇵🇰
+emoji: 🧠
+
 colorFrom: blue
 colorTo: indigo
 sdk: gradio
