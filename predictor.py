@@ -1,4 +1,5 @@
 import os
+import gc
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -23,37 +24,45 @@ class SentimentEmotionPredictor:
         self.sentiment_model = None
         self.emotion_model = None
 
-        self.load_models()
+    def get_tokenizer(self):
+        if self.tokenizer is None:
+            print(f"Lazy loading Tokenizer from '{self.sentiment_path}'...")
+            self.tokenizer = AutoTokenizer.from_pretrained(self.sentiment_path)
+        return self.tokenizer
 
-    def load_models(self):
-        print(f"Loading Tokenizer from '{self.sentiment_path}'...")
-        self.tokenizer = AutoTokenizer.from_pretrained(self.sentiment_path)
+    def get_sentiment_model(self):
+        if self.sentiment_model is None:
+            print(f"Lazy loading & Quantizing Sentiment Model (INT8) from '{self.sentiment_path}'...")
+            raw = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
+            self.sentiment_model = torch.quantization.quantize_dynamic(
+                raw, {torch.nn.Linear}, dtype=torch.qint8
+            )
+            self.sentiment_model.eval()
+            del raw
+            gc.collect()
+        return self.sentiment_model
 
-        print(f"Loading & Quantizing Sentiment Model (INT8) from '{self.sentiment_path}'...")
-        raw_sentiment = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
-        self.sentiment_model = torch.quantization.quantize_dynamic(
-            raw_sentiment, {torch.nn.Linear}, dtype=torch.qint8
-        )
-        self.sentiment_model.eval()
-
-        print(f"Loading & Quantizing Emotion Model (INT8) from '{self.emotion_path}'...")
-        raw_emotion = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
-        self.emotion_model = torch.quantization.quantize_dynamic(
-            raw_emotion, {torch.nn.Linear}, dtype=torch.qint8
-        )
-        self.emotion_model.eval()
-
-        print("Models loaded and quantized into INT8 memory successfully!")
-
+    def get_emotion_model(self):
+        if self.emotion_model is None:
+            print(f"Lazy loading & Quantizing Emotion Model (INT8) from '{self.emotion_path}'...")
+            raw = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
+            self.emotion_model = torch.quantization.quantize_dynamic(
+                raw, {torch.nn.Linear}, dtype=torch.qint8
+            )
+            self.emotion_model.eval()
+            del raw
+            gc.collect()
+        return self.emotion_model
 
     def get_word_attention(self, text):
-        inputs = self.tokenizer(text, return_tensors="pt", max_length=128, truncation=True)
+        tokenizer = self.get_tokenizer()
+        sentiment_model = self.get_sentiment_model()
+        inputs = tokenizer(text, return_tensors="pt", max_length=128, truncation=True)
         with torch.no_grad():
-            outputs = self.sentiment_model(**inputs, output_attentions=True)
+            outputs = sentiment_model(**inputs, output_attentions=True)
         
-        # Last layer attention averaged across heads for the [CLS] token
         attn = outputs.attentions[-1].mean(dim=1).squeeze(0)[0, :]
-        tokens = self.tokenizer.convert_ids_to_tokens(inputs['input_ids'][0])
+        tokens = tokenizer.convert_ids_to_tokens(inputs['input_ids'][0])
 
         attention_list = []
         for tok, score in zip(tokens, attn):
@@ -68,11 +77,15 @@ class SentimentEmotionPredictor:
             return {"error": "Empty text provided."}
 
         text_str = str(text).strip()
-        inputs = self.tokenizer(text_str, return_tensors="pt", truncation=True, max_length=128)
+        tokenizer = self.get_tokenizer()
+        sentiment_model = self.get_sentiment_model()
+        emotion_model = self.get_emotion_model()
+
+        inputs = tokenizer(text_str, return_tensors="pt", truncation=True, max_length=128)
 
         with torch.no_grad():
-            s_outputs = self.sentiment_model(**inputs, output_attentions=True)
-            e_outputs = self.emotion_model(**inputs)
+            s_outputs = sentiment_model(**inputs, output_attentions=True)
+            e_outputs = emotion_model(**inputs)
 
         s_probs = F.softmax(s_outputs.logits, dim=-1)[0]
         e_probs = F.softmax(e_outputs.logits, dim=-1)[0]
@@ -90,3 +103,4 @@ class SentimentEmotionPredictor:
             "emotion_scores": {l: round(float(p), 4) for l, p in zip(EMOTION_LABELS, e_probs)},
             "attention": attention_scores
         }
+
