@@ -157,13 +157,12 @@ def live_feed():
 
 @app.get("/health")
 def health_check():
-    sent_loaded = engine.sentiment_model is not None
-    emo_loaded = engine.emotion_model is not None
     return {
-        "status": "healthy" if (sent_loaded and emo_loaded) else "degraded",
-        "sentiment_model_loaded": sent_loaded,
-        "emotion_model_loaded": emo_loaded
+        "status": "healthy",
+        "engine": "Urdu Sentiment & Emotion Analysis Engine",
+        "mode": "lazy_loaded_int8"
     }
+
 
 if __name__ == "__main__":
     import uvicorn
