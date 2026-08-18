@@ -1,4 +1,16 @@
+---
+title: Urdu Sentiment & Emotion Analysis Engine
+emoji: 🇵🇰
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+sdk_version: 4.26.0
+app_file: app.py
+pinned: false
+---
+
 # Urdu Sentiment and Emotion Analysis Engine
+
 
 Welcome to the Urdu Sentiment and Emotion Analysis Engine project! This repository contains the code for a multilingual NLP system that classifies sentiment (Positive, Negative, Neutral) and emotion (Joy, Anger, Fear, Sadness) from Urdu, Roman Urdu, and mixed-language text using a fine-tuned XLM-RoBERTa transformer.
 
