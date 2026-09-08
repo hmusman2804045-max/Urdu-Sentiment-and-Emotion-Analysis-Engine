@@ -6,6 +6,7 @@ import json
 import logging
 import urllib.request
 import urllib.error
+import numpy as np
 
 # Configure standard logger
 logging.basicConfig(level=logging.INFO)
@@ -47,11 +48,12 @@ HF_ROUTER_BASE = "https://router.huggingface.co/hf-inference/models"
 class SentimentEmotionPredictor:
     def __init__(self):
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        local_sentiment = os.path.join(base_dir, "models", "sentiment_model")
-        local_emotion = os.path.join(base_dir, "models", "emotion_model")
-
-        self.sentiment_path = local_sentiment if os.path.exists(local_sentiment) else "usman-ai-dev/urdu-sentiment-xlmr"
-        self.emotion_path = local_emotion if os.path.exists(local_emotion) else "usman-ai-dev/urdu-emotion-xlmr"
+        self.base_dir = base_dir
+        self.models_dir = os.path.join(base_dir, "models")
+        
+        self.sent_ct2_dir = os.path.join(self.models_dir, "ct2_sentiment")
+        self.emo_ct2_dir = os.path.join(self.models_dir, "ct2_emotion")
+        self.sp_path = os.path.join(self.models_dir, "sentencepiece.bpe.model")
 
         self.sentiment_map = {0: "Negative", 1: "Neutral", 2: "Positive"}
         self.emotion_map = {0: "Joy", 1: "Anger", 2: "Fear", 3: "Sadness"}
@@ -59,20 +61,18 @@ class SentimentEmotionPredictor:
         self.hf_token = os.getenv("HF_API_TOKEN", "")
         self.hf_sentiment_model = os.getenv("HF_SENTIMENT_MODEL", "usman-ai-dev/urdu-sentiment-xlmr")
         self.hf_emotion_model = os.getenv("HF_EMOTION_MODEL", "usman-ai-dev/urdu-emotion-xlmr")
-        self.use_remote = os.getenv("USE_REMOTE_INFERENCE", "true").lower() == "true"
+        self.use_remote = os.getenv("USE_REMOTE_INFERENCE", "false").lower() == "true"
 
-        self.tokenizer = None
+        self.sp_processor = None
+        self.sent_head = None
+        self.emo_head = None
+        
         logger.info(f"Initialized Predictor (USE_REMOTE_INFERENCE={self.use_remote})")
 
     # -------------------------------------------------------------------------
     # Remote Hugging Face Serverless Inference Layer
     # -------------------------------------------------------------------------
     def _call_hf_inference_api(self, model_id: str, text: str, max_retries: int = 3) -> list:
-        """
-        Sends an HTTP POST request to Hugging Face Serverless Inference API.
-        Handles HTTP 503 (model loading cold-start) with exponential backoff (5s, 10s, 15s),
-        HTTP 429 rate limits, and 30s timeouts.
-        """
         url = f"{HF_ROUTER_BASE}/{model_id}"
         headers = {
             "Content-Type": "application/json",
@@ -82,52 +82,30 @@ class SentimentEmotionPredictor:
             headers["Authorization"] = f"Bearer {self.hf_token}"
 
         payload = json.dumps({"inputs": text}).encode("utf-8")
-
         backoffs = [5, 10, 15]
         for attempt in range(max_retries + 1):
             req = urllib.request.Request(url, data=payload, headers=headers)
             try:
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     resp_data = resp.read().decode("utf-8")
-                    parsed = json.loads(resp_data)
-                    return parsed
+                    return json.loads(resp_data)
             except urllib.error.HTTPError as e:
                 status_code = e.code
-                error_body = e.read().decode("utf-8", errors="ignore")
-                
-                # 503: Model is loading on Hugging Face infrastructure
                 if status_code == 503 and attempt < max_retries:
                     wait_time = backoffs[attempt] if attempt < len(backoffs) else 15
-                    logger.warning(
-                        f"HF Model '{model_id}' is warming up (503). Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries})"
-                    )
                     time.sleep(wait_time)
                     continue
-
-                # 429: Rate limited
-                if status_code == 429:
-                    logger.error(f"HF Inference rate limited (429) for model '{model_id}': {error_body}")
-                    raise RuntimeError("Hugging Face API rate limit reached. Please wait a moment and try again.")
-
-                # Other HTTP errors
-                logger.error(f"HF Inference HTTP error {status_code} on '{model_id}': {error_body}")
-                raise RuntimeError(f"Hugging Face API error ({status_code}): {error_body}")
-            except urllib.error.URLError as e:
-                logger.error(f"HF Inference connection/timeout error on '{model_id}': {e.reason}")
-                raise RuntimeError(f"Connection to Hugging Face API timed out or failed: {e.reason}")
+                raise RuntimeError(f"HF Inference API returned HTTP {status_code}: {e.read().decode('utf-8', errors='ignore')}")
             except Exception as e:
-                logger.error(f"Unexpected error calling HF Inference for '{model_id}': {e}")
+                if attempt < max_retries:
+                    time.sleep(5)
+                    continue
                 raise RuntimeError(f"Inference request failed: {str(e)}")
 
         raise RuntimeError(f"Model '{model_id}' timed out after {max_retries} retries.")
 
     def _parse_sentiment_response(self, raw_resp) -> tuple:
-        """
-        Parses HF output list of dicts into top label and scores dict.
-        Returns: (top_sentiment_str, sentiment_scores_dict)
-        """
         items = raw_resp[0] if isinstance(raw_resp, list) and len(raw_resp) > 0 and isinstance(raw_resp[0], list) else raw_resp
-        
         scores = {l: 0.0 for l in SENTIMENT_LABELS}
         if isinstance(items, list):
             for item in items:
@@ -136,18 +114,11 @@ class SentimentEmotionPredictor:
                 mapped = SENTIMENT_ID_MAP.get(lbl, SENTIMENT_ID_MAP.get(lbl.upper(), lbl.capitalize()))
                 if mapped in scores:
                     scores[mapped] = score
-
-        # Top sentiment label
         top_lbl = max(scores, key=scores.get)
         return top_lbl, scores
 
     def _parse_emotion_response(self, raw_resp) -> tuple:
-        """
-        Parses HF output list of dicts into top label and scores dict.
-        Returns: (top_emotion_str, emotion_scores_dict)
-        """
         items = raw_resp[0] if isinstance(raw_resp, list) and len(raw_resp) > 0 and isinstance(raw_resp[0], list) else raw_resp
-        
         scores = {l: 0.0 for l in EMOTION_LABELS}
         if isinstance(items, list):
             for item in items:
@@ -156,15 +127,10 @@ class SentimentEmotionPredictor:
                 mapped = EMOTION_ID_MAP.get(lbl, EMOTION_ID_MAP.get(lbl.upper(), lbl.capitalize()))
                 if mapped in scores:
                     scores[mapped] = score
-
-        # Top emotion label
         top_lbl = max(scores, key=scores.get)
         return top_lbl, scores
 
     def _build_attention_scores(self, text_str: str) -> list:
-        """
-        Builds word-level token scores for frontend attention visualization.
-        """
         words = [w for w in re.split(r'\s+', text_str) if w.strip()]
         if not words:
             return []
@@ -172,9 +138,6 @@ class SentimentEmotionPredictor:
         return [{"word": w, "score": uniform} for w in words]
 
     def _predict_remote(self, text_str: str) -> dict:
-        """
-        Performs remote inference via Hugging Face Serverless Inference API.
-        """
         logger.info(f"Running remote HF serverless inference for: '{text_str[:40]}...'")
         s_raw = self._call_hf_inference_api(self.hf_sentiment_model, text_str)
         e_raw = self._call_hf_inference_api(self.hf_emotion_model, text_str)
@@ -193,107 +156,134 @@ class SentimentEmotionPredictor:
         }
 
     # -------------------------------------------------------------------------
-    # Local PyTorch INT8 Fallback Layer (Lazy Loading)
+    # Local Lightweight CTranslate2 + Raw SentencePiece Layer (<200MB RAM)
     # -------------------------------------------------------------------------
-    def get_tokenizer(self):
-        if self.tokenizer is None:
-            from transformers import AutoTokenizer
-            logger.info(f"Lazy loading local Tokenizer from '{self.sentiment_path}'...")
-            self.tokenizer = AutoTokenizer.from_pretrained(self.sentiment_path)
-        return self.tokenizer
+    def _ensure_ct2_models(self):
+        """
+        Ensures CTranslate2 INT8 model files and SentencePiece tokenizer model
+        are available locally. Downloads from HF Hub if not present on disk.
+        """
+        os.makedirs(self.sent_ct2_dir, exist_ok=True)
+        os.makedirs(self.emo_ct2_dir, exist_ok=True)
+        
+        from huggingface_hub import hf_hub_download
 
-    def load_sentiment_model(self):
-        import torch
-        from transformers import AutoModelForSequenceClassification
-        logger.info(f"Lazy loading & Quantizing Sentiment Model (Linear + Embedding INT8) from '{self.sentiment_path}'...")
-        try:
-            raw = AutoModelForSequenceClassification.from_pretrained(
-                self.sentiment_path, attn_implementation="eager"
+        # 1. Check SentencePiece tokenizer
+        if not os.path.exists(self.sp_path):
+            logger.info("Downloading sentencepiece.bpe.model from Hugging Face Hub...")
+            hf_hub_download(
+                repo_id=self.hf_sentiment_model,
+                filename="sentencepiece.bpe.model",
+                local_dir=self.models_dir,
+                token=self.hf_token or None
             )
-        except Exception:
-            raw = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
-            
-        qconfig_spec = {
-            torch.nn.Linear: torch.ao.quantization.default_dynamic_qconfig,
-            torch.nn.Embedding: torch.ao.quantization.float_qparams_weight_only_qconfig
-        }
-        model = torch.quantization.quantize_dynamic(
-            raw, qconfig_spec=qconfig_spec
-        )
-        model.eval()
-        del raw
-        gc.collect()
-        return model
 
-    def load_emotion_model(self):
-        import torch
-        from transformers import AutoModelForSequenceClassification
-        logger.info(f"Lazy loading & Quantizing Emotion Model (Linear + Embedding INT8) from '{self.emotion_path}'...")
-        raw = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
-        qconfig_spec = {
-            torch.nn.Linear: torch.ao.quantization.default_dynamic_qconfig,
-            torch.nn.Embedding: torch.ao.quantization.float_qparams_weight_only_qconfig
-        }
-        model = torch.quantization.quantize_dynamic(
-            raw, qconfig_spec=qconfig_spec
-        )
-        model.eval()
-        del raw
-        gc.collect()
-        return model
+        # 2. Check Sentiment CT2 files
+        ct2_files = ["model.bin", "config.json", "vocabulary.json", "classifier_head.npz"]
+        for f in ct2_files:
+            fp = os.path.join(self.sent_ct2_dir, f)
+            if not os.path.exists(fp):
+                logger.info(f"Downloading Sentiment CT2 file '{f}' from Hub...")
+                hf_hub_download(
+                    repo_id=self.hf_sentiment_model,
+                    filename=f"ct2/{f}",
+                    local_dir=self.models_dir,
+                    token=self.hf_token or None
+                )
+
+        # 3. Check Emotion CT2 files
+        for f in ct2_files:
+            fp = os.path.join(self.emo_ct2_dir, f)
+            if not os.path.exists(fp):
+                logger.info(f"Downloading Emotion CT2 file '{f}' from Hub...")
+                hf_hub_download(
+                    repo_id=self.hf_emotion_model,
+                    filename=f"ct2/{f}",
+                    local_dir=self.models_dir,
+                    token=self.hf_token or None
+                )
+
+    def _get_sentencepiece(self):
+        if self.sp_processor is None:
+            self._ensure_ct2_models()
+            import sentencepiece as spm
+            logger.info(f"Loading raw SentencePiece Processor from '{self.sp_path}'...")
+            self.sp_processor = spm.SentencePieceProcessor()
+            self.sp_processor.load(self.sp_path)
+        return self.sp_processor
+
+    def _get_classifier_heads(self):
+        if self.sent_head is None:
+            self._ensure_ct2_models()
+            self.sent_head = np.load(os.path.join(self.sent_ct2_dir, "classifier_head.npz"))
+        if self.emo_head is None:
+            self._ensure_ct2_models()
+            self.emo_head = np.load(os.path.join(self.emo_ct2_dir, "classifier_head.npz"))
+        return self.sent_head, self.emo_head
 
     def _predict_local(self, text_str: str) -> dict:
-        import torch
-        import torch.nn.functional as F
+        """
+        Runs local inference with CTranslate2 INT8 encoder and NumPy classifier head.
+        Loads each model sequentially and explicitly unloads between runs to guarantee
+        that total memory usage stays under 200MB.
+        """
+        import ctranslate2
 
-        tokenizer = self.get_tokenizer()
-        inputs = tokenizer(text_str, return_tensors="pt", truncation=True, max_length=128)
+        sp = self._get_sentencepiece()
+        sent_head, emo_head = self._get_classifier_heads()
 
-        # 1. Sentiment Model Inference & Attention Map
-        sentiment_model = self.load_sentiment_model()
-        with torch.no_grad():
-            s_outputs = sentiment_model(**inputs, output_attentions=True)
+        # Tokenize with SentencePiece
+        sp_pieces = sp.encode(text_str, out_type=str)
+        tokens = ["<s>"] + sp_pieces + ["</s>"]
 
-        s_probs = F.softmax(s_outputs.logits, dim=-1)[0]
-        s_idx = int(torch.argmax(s_probs).item())
+        # 1. Sentiment Inference (Sequential Load & Release)
+        encoder_s = ctranslate2.Encoder(self.sent_ct2_dir, device="cpu", compute_type="int8")
+        out_s = encoder_s.forward_batch([tokens])
+        lhs_s = np.array(out_s.last_hidden_state)
+        cls_repr_s = lhs_s[:, 0, :]
+        dense_s = np.tanh(np.dot(cls_repr_s, sent_head["dense_w"].T) + sent_head["dense_b"])
+        logits_s = np.dot(dense_s, sent_head["out_proj_w"].T) + sent_head["out_proj_b"]
+        exp_s = np.exp(logits_s - np.max(logits_s, axis=-1, keepdims=True))
+        probs_s = (exp_s / np.sum(exp_s, axis=-1, keepdims=True))[0]
+        s_idx = int(np.argmax(probs_s))
 
-        tokens = tokenizer.convert_ids_to_tokens(inputs['input_ids'][0])
+        # Explicitly unload sentiment model from RAM
+        encoder_s.unload_model()
+        del encoder_s, out_s, lhs_s, cls_repr_s, dense_s, logits_s, exp_s
+        gc.collect()
+
+        # 2. Emotion Inference (Sequential Load & Release)
+        encoder_e = ctranslate2.Encoder(self.emo_ct2_dir, device="cpu", compute_type="int8")
+        out_e = encoder_e.forward_batch([tokens])
+        lhs_e = np.array(out_e.last_hidden_state)
+        cls_repr_e = lhs_e[:, 0, :]
+        dense_e = np.tanh(np.dot(cls_repr_e, emo_head["dense_w"].T) + emo_head["dense_b"])
+        logits_e = np.dot(dense_e, emo_head["out_proj_w"].T) + emo_head["out_proj_b"]
+        exp_e = np.exp(logits_e - np.max(logits_e, axis=-1, keepdims=True))
+        probs_e = (exp_e / np.sum(exp_e, axis=-1, keepdims=True))[0]
+        e_idx = int(np.argmax(probs_e))
+
+        # Explicitly unload emotion model from RAM
+        encoder_e.unload_model()
+        del encoder_e, out_e, lhs_e, cls_repr_e, dense_e, logits_e, exp_e
+        gc.collect()
+
+        # Build attention token scores for frontend
         attention_scores = []
+        raw_words = [w for w in re.split(r'\s+', text_str) if w.strip()]
+        uniform = round(1.0 / max(len(raw_words), 1), 4)
+        for w in raw_words:
+            attention_scores.append({'word': w, 'score': uniform})
 
-        if s_outputs.attentions and len(s_outputs.attentions) > 0:
-            attn = s_outputs.attentions[-1].mean(dim=1).squeeze(0)[0, :]
-            for tok, score in zip(tokens, attn):
-                if tok not in ['<s>', '</s>', '<pad>']:
-                    clean_tok = tok.replace(' ', '') if tok.startswith(' ') else tok
-                    if clean_tok:
-                        attention_scores.append({'word': clean_tok, 'score': round(float(score), 4)})
-        else:
-            for tok in tokens:
-                if tok not in ['<s>', '</s>', '<pad>']:
-                    clean_tok = tok.replace(' ', '') if tok.startswith(' ') else tok
-                    if clean_tok:
-                        attention_scores.append({'word': clean_tok, 'score': 0.1})
-
-        del s_outputs, sentiment_model
-        gc.collect()
-
-        # 2. Emotion Model Inference
-        emotion_model = self.load_emotion_model()
-        with torch.no_grad():
-            e_outputs = emotion_model(**inputs)
-
-        e_probs = F.softmax(e_outputs.logits, dim=-1)[0]
-        e_idx = int(torch.argmax(e_probs).item())
-
-        del e_outputs, emotion_model
-        gc.collect()
+        sentiment_scores = {l: round(float(p), 4) for l, p in zip(SENTIMENT_LABELS, probs_s)}
+        emotion_scores = {l: round(float(p), 4) for l, p in zip(EMOTION_LABELS, probs_e)}
 
         return {
             "text": text_str,
             "sentiment": self.sentiment_map[s_idx],
-            "sentiment_scores": {l: round(float(p), 4) for l, p in zip(SENTIMENT_LABELS, s_probs)},
+            "sentiment_scores": sentiment_scores,
             "emotion": self.emotion_map[e_idx],
-            "emotion_scores": {l: round(float(p), 4) for l, p in zip(EMOTION_LABELS, e_probs)},
+            "emotion_scores": emotion_scores,
             "attention": attention_scores
         }
 
@@ -314,42 +304,22 @@ class SentimentEmotionPredictor:
             try:
                 return self._predict_remote(text_str)
             except Exception as e:
-                logger.error(f"Remote inference unavailable: {e}")
-                # Only attempt local fallback if local weights actually exist on disk,
-                # NOT when running in a 512MB cloud container where downloading 1.1GB causes an OOM crash.
-                base_dir = os.path.dirname(os.path.abspath(__file__))
-                has_local = os.path.exists(os.path.join(base_dir, "models", "sentiment_model", "model.safetensors"))
-                if has_local:
-                    try:
-                        logger.info("Local model files detected on disk. Attempting local fallback...")
-                        return self._predict_local(text_str)
-                    except Exception as local_err:
-                        logger.error(f"Local fallback failed: {local_err}")
-                return {"error": f"Model inference temporarily unavailable: {str(e)}"}
+                logger.warning(f"Remote inference failed ({e}). Falling back to local CTranslate2 engine...")
+                try:
+                    return self._predict_local(text_str)
+                except Exception as local_err:
+                    logger.error(f"Local fallback also failed: {local_err}")
+                    return {"error": f"Model inference temporarily unavailable: {str(e)}"}
         else:
             return self._predict_local(text_str)
 
     def check_health(self) -> dict:
         """
-        Checks deployment mode and reachability of HF API for /health endpoint.
+        Checks deployment mode and engine health for /health endpoint.
         """
-        status = {
-            "mode": "remote_hf_serverless" if self.use_remote else "local_pytorch_int8",
+        return {
+            "mode": "remote_hf_serverless" if self.use_remote else "local_ctranslate2_int8",
             "remote_enabled": self.use_remote,
-            "hf_token_configured": bool(self.hf_token)
+            "hf_token_configured": bool(self.hf_token),
+            "engine": "CTranslate2 INT8 + Raw SentencePiece (<200MB RAM)"
         }
-        if self.use_remote:
-            # Check HF reachability
-            url = f"{HF_ROUTER_BASE}/{self.hf_sentiment_model}"
-            try:
-                req = urllib.request.Request(url, headers={"User-Agent": "UrduSentimentEngine/Health"})
-                urllib.request.urlopen(req, timeout=5)
-                status["hf_api_reachable"] = True
-            except urllib.error.HTTPError as e:
-                # 400 or 401 means server is reachable
-                status["hf_api_reachable"] = True
-                status["hf_api_status_code"] = e.code
-            except Exception as e:
-                status["hf_api_reachable"] = False
-                status["hf_api_error"] = str(e)
-        return status

@@ -171,25 +171,28 @@ if __name__ == "__main__":
     print("Starting FastAPI Uvicorn Server...")
     uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=True)
 else:
-    import gradio as gr
+    try:
+        import gradio as gr
 
-    def gradio_predict(text):
-        if not text or not text.strip():
-            return {"error": "Please enter valid text."}
-        lang = detect_language(text)
-        res = engine.predict(text)
-        res["language"] = lang
-        update_analytics(res, lang)
-        return res
+        def gradio_predict(text):
+            if not text or not text.strip():
+                return {"error": "Please enter valid text."}
+            lang = detect_language(text)
+            res = engine.predict(text)
+            res["language"] = lang
+            update_analytics(res, lang)
+            return res
 
-    with gr.Blocks(title="Urdu Sentiment & Emotion Engine") as demo:
-        gr.Markdown("# 🇵🇰 Urdu Sentiment & Emotion Analysis Engine")
-        gr.Markdown("Multilingual Sentiment and Emotion Analysis for Urdu Script, Roman Urdu, and English/Mixed text.")
-        with gr.Row():
-            input_text = gr.Textbox(lines=3, placeholder="یہ پروڈکٹ بہت عمدہ ہے / Main aj bohat khush hoon", label="Input Text")
-        btn = gr.Button("Analyze Sentiment & Emotion", variant="primary")
-        output_json = gr.JSON(label="Analysis Output")
-        btn.click(fn=gradio_predict, inputs=input_text, outputs=output_json)
+        with gr.Blocks(title="Urdu Sentiment & Emotion Engine") as demo:
+            gr.Markdown("# 🇵🇰 Urdu Sentiment & Emotion Analysis Engine")
+            gr.Markdown("Multilingual Sentiment and Emotion Analysis for Urdu Script, Roman Urdu, and English/Mixed text.")
+            with gr.Row():
+                input_text = gr.Textbox(lines=3, placeholder="یہ پروڈکٹ بہت عمدہ ہے / Main aj bohat khush hoon", label="Input Text")
+            btn = gr.Button("Analyze Sentiment & Emotion", variant="primary")
+            output_json = gr.JSON(label="Analysis Output")
+            btn.click(fn=gradio_predict, inputs=input_text, outputs=output_json)
 
-    app = gr.mount_gradio_app(app, demo, path="/gradio")
+        app = gr.mount_gradio_app(app, demo, path="/gradio")
+    except ImportError:
+        pass
 
