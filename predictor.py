@@ -306,8 +306,11 @@ class SentimentEmotionPredictor:
             try:
                 return self._predict_remote(text_str)
             except Exception as e:
-                logger.error(f"Remote HF inference failed: {e}. Falling back to local PyTorch...")
-                # Return structured error message if local fallback cannot run
+                logger.error(f"Remote HF inference failed: {e}")
+                # On Render (512MB RAM limit), do not attempt 923MB local model loading
+                if os.getenv("RENDER"):
+                    return {"error": f"Model inference temporarily unavailable: {str(e)}"}
+                logger.info("Falling back to local PyTorch...")
                 try:
                     return self._predict_local(text_str)
                 except Exception as local_err:
