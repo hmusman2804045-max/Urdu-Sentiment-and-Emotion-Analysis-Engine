@@ -205,7 +205,7 @@ class SentimentEmotionPredictor:
     def load_sentiment_model(self):
         import torch
         from transformers import AutoModelForSequenceClassification
-        logger.info(f"Lazy loading & Quantizing Sentiment Model (INT8) from '{self.sentiment_path}'...")
+        logger.info(f"Lazy loading & Quantizing Sentiment Model (Linear + Embedding INT8) from '{self.sentiment_path}'...")
         try:
             raw = AutoModelForSequenceClassification.from_pretrained(
                 self.sentiment_path, attn_implementation="eager"
@@ -213,8 +213,12 @@ class SentimentEmotionPredictor:
         except Exception:
             raw = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
             
+        qconfig_spec = {
+            torch.nn.Linear: torch.ao.quantization.default_dynamic_qconfig,
+            torch.nn.Embedding: torch.ao.quantization.float_qparams_weight_only_qconfig
+        }
         model = torch.quantization.quantize_dynamic(
-            raw, {torch.nn.Linear}, dtype=torch.qint8
+            raw, qconfig_spec=qconfig_spec
         )
         model.eval()
         del raw
@@ -224,10 +228,14 @@ class SentimentEmotionPredictor:
     def load_emotion_model(self):
         import torch
         from transformers import AutoModelForSequenceClassification
-        logger.info(f"Lazy loading & Quantizing Emotion Model (INT8) from '{self.emotion_path}'...")
+        logger.info(f"Lazy loading & Quantizing Emotion Model (Linear + Embedding INT8) from '{self.emotion_path}'...")
         raw = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
+        qconfig_spec = {
+            torch.nn.Linear: torch.ao.quantization.default_dynamic_qconfig,
+            torch.nn.Embedding: torch.ao.quantization.float_qparams_weight_only_qconfig
+        }
         model = torch.quantization.quantize_dynamic(
-            raw, {torch.nn.Linear}, dtype=torch.qint8
+            raw, qconfig_spec=qconfig_spec
         )
         model.eval()
         del raw
@@ -306,16 +314,12 @@ class SentimentEmotionPredictor:
             try:
                 return self._predict_remote(text_str)
             except Exception as e:
-                logger.error(f"Remote HF inference failed: {e}")
-                # On Render (512MB RAM limit), do not attempt 923MB local model loading
-                if os.getenv("RENDER"):
-                    return {"error": f"Model inference temporarily unavailable: {str(e)}"}
-                logger.info("Falling back to local PyTorch...")
+                logger.warning(f"Remote HF inference unavailable: {e}. Executing with local Quantized PyTorch Engine...")
                 try:
                     return self._predict_local(text_str)
                 except Exception as local_err:
                     logger.error(f"Local PyTorch fallback also failed: {local_err}")
-                    return {"error": f"Inference failed: {str(e)}"}
+                    return {"error": f"Model inference temporarily unavailable: {str(e)}"}
         else:
             return self._predict_local(text_str)
 
