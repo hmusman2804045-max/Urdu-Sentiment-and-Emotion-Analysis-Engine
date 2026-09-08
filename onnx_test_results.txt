@@ -1,0 +1,32 @@
+============================================================
+  URDU SENTIMENT ENGINE - RAM BENCHMARK: PYTORCH VS ONNX  
+============================================================
+1. Baseline Idle Process RAM: 198.92 MB
+
+--- TEST 1: Current PyTorch + INT8 Dynamic Quantization ---
+RAM before loading PyTorch models: 381.73 MB
+Loading Sentiment Model (FP32)...
+RAM with 1 FP32 Model loaded: 401.79 MB
+Quantizing Sentiment Model (INT8)...
+RAM after PyTorch INT8 quantization: 1,589.43 MB
+Predicting with PyTorch INT8...
+Peak RAM during PyTorch inference: 1,862.78 MB
+RAM after PyTorch cleanup: 824.26 MB
+
+--- TEST 2: ONNX Format + ONNX Runtime (CPU Execution Provider) ---
+RAM before loading ONNX session: 824.26 MB
+Loading ONNX Runtime Session...
+RAM with ONNX Session loaded: 944.32 MB
+Predicting with ONNX Runtime...
+Peak RAM during ONNX inference: 1,263.83 MB
+ONNX Inference Output Logits: [[-0.6244080066680908, -1.8274861574172974, 2.7849671840667725]]
+RAM after ONNX cleanup: 1,046.09 MB
+
+============================================================
+SUMMARY COMPARISON:
+- Render Free Tier RAM Limit : 512 MB
+- PyTorch INT8 Peak RAM      : 1,862 MB (3.6x over limit -> CRASH)
+- ONNX Runtime Peak RAM      : 1,263 MB (2.4x over limit -> CRASH)
+- Verdict: Local model execution on Render exceeds hardware limits.
+  Remote API Proxy architecture is mandatory for $0/mo operation.
+============================================================
