@@ -157,11 +157,13 @@ def live_feed():
 
 @app.get("/health")
 def health_check():
-    return {
+    health_info = {
         "status": "healthy",
-        "engine": "Urdu Sentiment & Emotion Analysis Engine",
-        "mode": "lazy_loaded_int8"
+        "engine": "Urdu Sentiment & Emotion Analysis Engine"
     }
+    if hasattr(engine, "check_health"):
+        health_info.update(engine.check_health())
+    return health_info
 
 
 if __name__ == "__main__":
