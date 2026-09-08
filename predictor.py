@@ -314,12 +314,18 @@ class SentimentEmotionPredictor:
             try:
                 return self._predict_remote(text_str)
             except Exception as e:
-                logger.warning(f"Remote HF inference unavailable: {e}. Executing with local Quantized PyTorch Engine...")
-                try:
-                    return self._predict_local(text_str)
-                except Exception as local_err:
-                    logger.error(f"Local PyTorch fallback also failed: {local_err}")
-                    return {"error": f"Model inference temporarily unavailable: {str(e)}"}
+                logger.error(f"Remote inference unavailable: {e}")
+                # Only attempt local fallback if local weights actually exist on disk,
+                # NOT when running in a 512MB cloud container where downloading 1.1GB causes an OOM crash.
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                has_local = os.path.exists(os.path.join(base_dir, "models", "sentiment_model", "model.safetensors"))
+                if has_local:
+                    try:
+                        logger.info("Local model files detected on disk. Attempting local fallback...")
+                        return self._predict_local(text_str)
+                    except Exception as local_err:
+                        logger.error(f"Local fallback failed: {local_err}")
+                return {"error": f"Model inference temporarily unavailable: {str(e)}"}
         else:
             return self._predict_local(text_str)
 
