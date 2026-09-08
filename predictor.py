@@ -162,6 +162,7 @@ class SentimentEmotionPredictor:
         Ensures CTranslate2 INT8 model files and SentencePiece tokenizer model
         are available locally. Downloads from HF Hub if not present on disk.
         """
+        os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.sent_ct2_dir, exist_ok=True)
         os.makedirs(self.emo_ct2_dir, exist_ok=True)
         
@@ -311,7 +312,11 @@ class SentimentEmotionPredictor:
                     logger.error(f"Local fallback also failed: {local_err}")
                     return {"error": f"Model inference temporarily unavailable: {str(e)}"}
         else:
-            return self._predict_local(text_str)
+            try:
+                return self._predict_local(text_str)
+            except Exception as e:
+                logger.error(f"Local CTranslate2 inference failed: {e}", exc_info=True)
+                return {"error": f"Prediction failed: {str(e)}"}
 
     def check_health(self) -> dict:
         """
