@@ -60,6 +60,7 @@ class SentimentEmotionPredictor:
 
         self.hf_token = os.getenv("HF_API_TOKEN", "")
         self.hf_sentiment_model = os.getenv("HF_SENTIMENT_MODEL", "usman-ai-dev/urdu-sentiment-xlmr")
+        self.hf_emotion_model = os.getenv("HF_EMOTION_MODEL", "usman-ai-dev/urdu-emotion-xlmr")
         self.use_remote = os.getenv("ENABLE_REMOTE_HF", "false").lower() == "true"
 
         self.sp_processor = None
