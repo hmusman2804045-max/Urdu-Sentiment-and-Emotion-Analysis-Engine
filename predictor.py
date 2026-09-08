@@ -25,7 +25,7 @@ class SentimentEmotionPredictor:
 
         self.tokenizer = None
         self.hf_space_url = os.getenv("HF_SPACE_URL", DEFAULT_HF_SPACE_URL)
-        self.use_remote = os.getenv("USE_REMOTE_INFERENCE", "true").lower() == "true"
+        self.use_remote = os.getenv("USE_REMOTE_INFERENCE", "false").lower() == "true"
 
     def get_tokenizer(self):
         if self.tokenizer is None:
