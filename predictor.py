@@ -1,12 +1,15 @@
 import os
 import gc
+import json
+import urllib.request
 import torch
 import torch.nn.functional as F
 import numpy as np
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 SENTIMENT_LABELS = ['Negative', 'Neutral', 'Positive']
 EMOTION_LABELS = ['Joy', 'Anger', 'Fear', 'Sadness']
+
+DEFAULT_HF_SPACE_URL = "https://usman-ai-dev-urdu-sentiment-engine-space.hf.space/analyze"
 
 class SentimentEmotionPredictor:
     def __init__(self):
@@ -21,14 +24,32 @@ class SentimentEmotionPredictor:
         self.emotion_map = {0: "Joy", 1: "Anger", 2: "Fear", 3: "Sadness"}
 
         self.tokenizer = None
+        self.hf_space_url = os.getenv("HF_SPACE_URL", DEFAULT_HF_SPACE_URL)
+        self.use_remote = os.getenv("USE_REMOTE_INFERENCE", "true").lower() == "true"
 
     def get_tokenizer(self):
         if self.tokenizer is None:
+            from transformers import AutoTokenizer
             print(f"Lazy loading Tokenizer from '{self.sentiment_path}'...")
             self.tokenizer = AutoTokenizer.from_pretrained(self.sentiment_path)
         return self.tokenizer
 
+    def _predict_remote(self, text_str):
+        print(f"Forwarding inference to Hugging Face Space ({self.hf_space_url})...")
+        data = json.dumps({"text": text_str}).encode("utf-8")
+        req = urllib.request.Request(
+            self.hf_space_url,
+            data=data,
+            headers={"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=30) as response:
+            if response.status == 200:
+                result = json.loads(response.read().decode("utf-8"))
+                return result
+        raise RuntimeError(f"Remote HF Space returned status {response.status}")
+
     def load_sentiment_model(self):
+        from transformers import AutoModelForSequenceClassification
         print(f"Loading & Quantizing Sentiment Model (INT8) from '{self.sentiment_path}'...")
         try:
             raw = AutoModelForSequenceClassification.from_pretrained(
@@ -46,6 +67,7 @@ class SentimentEmotionPredictor:
         return model
 
     def load_emotion_model(self):
+        from transformers import AutoModelForSequenceClassification
         print(f"Loading & Quantizing Emotion Model (INT8) from '{self.emotion_path}'...")
         raw = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
         model = torch.quantization.quantize_dynamic(
@@ -61,8 +83,15 @@ class SentimentEmotionPredictor:
             return {"error": "Empty text provided."}
 
         text_str = str(text).strip()
-        tokenizer = self.get_tokenizer()
 
+        # Try remote HF Space first to keep Render memory under 40MB
+        if self.use_remote:
+            try:
+                return self._predict_remote(text_str)
+            except Exception as e:
+                print(f"Remote HF Space inference failed: {e}. Falling back to local PyTorch...")
+
+        tokenizer = self.get_tokenizer()
         inputs = tokenizer(text_str, return_tensors="pt", truncation=True, max_length=128)
 
         # 1. Sentiment Model Inference & Attention Map
@@ -112,5 +141,6 @@ class SentimentEmotionPredictor:
             "emotion_scores": {l: round(float(p), 4) for l, p in zip(EMOTION_LABELS, e_probs)},
             "attention": attention_scores
         }
+
 
 
