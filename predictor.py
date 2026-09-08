@@ -166,17 +166,18 @@ class SentimentEmotionPredictor:
         os.makedirs(self.sent_ct2_dir, exist_ok=True)
         os.makedirs(self.emo_ct2_dir, exist_ok=True)
         
+        import shutil
         from huggingface_hub import hf_hub_download
 
         # 1. Check SentencePiece tokenizer
         if not os.path.exists(self.sp_path):
             logger.info("Downloading sentencepiece.bpe.model from Hugging Face Hub...")
-            hf_hub_download(
+            downloaded = hf_hub_download(
                 repo_id=self.hf_sentiment_model,
                 filename="sentencepiece.bpe.model",
-                local_dir=self.models_dir,
                 token=self.hf_token or None
             )
+            shutil.copy(downloaded, self.sp_path)
 
         # 2. Check Sentiment CT2 files
         ct2_files = ["model.bin", "config.json", "vocabulary.json", "classifier_head.npz"]
@@ -184,24 +185,24 @@ class SentimentEmotionPredictor:
             fp = os.path.join(self.sent_ct2_dir, f)
             if not os.path.exists(fp):
                 logger.info(f"Downloading Sentiment CT2 file '{f}' from Hub...")
-                hf_hub_download(
+                downloaded = hf_hub_download(
                     repo_id=self.hf_sentiment_model,
                     filename=f"ct2/{f}",
-                    local_dir=self.models_dir,
                     token=self.hf_token or None
                 )
+                shutil.copy(downloaded, fp)
 
         # 3. Check Emotion CT2 files
         for f in ct2_files:
             fp = os.path.join(self.emo_ct2_dir, f)
             if not os.path.exists(fp):
                 logger.info(f"Downloading Emotion CT2 file '{f}' from Hub...")
-                hf_hub_download(
+                downloaded = hf_hub_download(
                     repo_id=self.hf_emotion_model,
                     filename=f"ct2/{f}",
-                    local_dir=self.models_dir,
                     token=self.hf_token or None
                 )
+                shutil.copy(downloaded, fp)
 
     def _get_sentencepiece(self):
         if self.sp_processor is None:
