@@ -21,8 +21,6 @@ class SentimentEmotionPredictor:
         self.emotion_map = {0: "Joy", 1: "Anger", 2: "Fear", 3: "Sadness"}
 
         self.tokenizer = None
-        self.sentiment_model = None
-        self.emotion_model = None
 
     def get_tokenizer(self):
         if self.tokenizer is None:
@@ -30,47 +28,27 @@ class SentimentEmotionPredictor:
             self.tokenizer = AutoTokenizer.from_pretrained(self.sentiment_path)
         return self.tokenizer
 
-    def get_sentiment_model(self):
-        if self.sentiment_model is None:
-            print(f"Lazy loading & Quantizing Sentiment Model (INT8) from '{self.sentiment_path}'...")
-            raw = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
-            self.sentiment_model = torch.quantization.quantize_dynamic(
-                raw, {torch.nn.Linear}, dtype=torch.qint8
-            )
-            self.sentiment_model.eval()
-            del raw
-            gc.collect()
-        return self.sentiment_model
+    def load_sentiment_model(self):
+        print(f"Loading & Quantizing Sentiment Model (INT8) from '{self.sentiment_path}'...")
+        raw = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
+        model = torch.quantization.quantize_dynamic(
+            raw, {torch.nn.Linear}, dtype=torch.qint8
+        )
+        model.eval()
+        del raw
+        gc.collect()
+        return model
 
-    def get_emotion_model(self):
-        if self.emotion_model is None:
-            print(f"Lazy loading & Quantizing Emotion Model (INT8) from '{self.emotion_path}'...")
-            raw = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
-            self.emotion_model = torch.quantization.quantize_dynamic(
-                raw, {torch.nn.Linear}, dtype=torch.qint8
-            )
-            self.emotion_model.eval()
-            del raw
-            gc.collect()
-        return self.emotion_model
-
-    def get_word_attention(self, text):
-        tokenizer = self.get_tokenizer()
-        sentiment_model = self.get_sentiment_model()
-        inputs = tokenizer(text, return_tensors="pt", max_length=128, truncation=True)
-        with torch.no_grad():
-            outputs = sentiment_model(**inputs, output_attentions=True)
-        
-        attn = outputs.attentions[-1].mean(dim=1).squeeze(0)[0, :]
-        tokens = tokenizer.convert_ids_to_tokens(inputs['input_ids'][0])
-
-        attention_list = []
-        for tok, score in zip(tokens, attn):
-            if tok not in ['<s>', '</s>', '<pad>']:
-                clean_tok = tok.replace(' ', '') if tok.startswith(' ') else tok
-                if clean_tok:
-                    attention_list.append({'word': clean_tok, 'score': round(float(score), 4)})
-        return attention_list
+    def load_emotion_model(self):
+        print(f"Loading & Quantizing Emotion Model (INT8) from '{self.emotion_path}'...")
+        raw = AutoModelForSequenceClassification.from_pretrained(self.emotion_path)
+        model = torch.quantization.quantize_dynamic(
+            raw, {torch.nn.Linear}, dtype=torch.qint8
+        )
+        model.eval()
+        del raw
+        gc.collect()
+        return model
 
     def predict(self, text):
         if not text or not str(text).strip():
@@ -78,22 +56,40 @@ class SentimentEmotionPredictor:
 
         text_str = str(text).strip()
         tokenizer = self.get_tokenizer()
-        sentiment_model = self.get_sentiment_model()
-        emotion_model = self.get_emotion_model()
 
         inputs = tokenizer(text_str, return_tensors="pt", truncation=True, max_length=128)
 
+        # 1. Sentiment Model Inference & Attention Map
+        sentiment_model = self.load_sentiment_model()
         with torch.no_grad():
             s_outputs = sentiment_model(**inputs, output_attentions=True)
-            e_outputs = emotion_model(**inputs)
 
         s_probs = F.softmax(s_outputs.logits, dim=-1)[0]
-        e_probs = F.softmax(e_outputs.logits, dim=-1)[0]
-
         s_idx = int(torch.argmax(s_probs).item())
+
+        attn = s_outputs.attentions[-1].mean(dim=1).squeeze(0)[0, :]
+        tokens = tokenizer.convert_ids_to_tokens(inputs['input_ids'][0])
+
+        attention_scores = []
+        for tok, score in zip(tokens, attn):
+            if tok not in ['<s>', '</s>', '<pad>']:
+                clean_tok = tok.replace(' ', '') if tok.startswith(' ') else tok
+                if clean_tok:
+                    attention_scores.append({'word': clean_tok, 'score': round(float(score), 4)})
+
+        del s_outputs, sentiment_model
+        gc.collect()
+
+        # 2. Emotion Model Inference
+        emotion_model = self.load_emotion_model()
+        with torch.no_grad():
+            e_outputs = emotion_model(**inputs)
+
+        e_probs = F.softmax(e_outputs.logits, dim=-1)[0]
         e_idx = int(torch.argmax(e_probs).item())
 
-        attention_scores = self.get_word_attention(text_str)
+        del e_outputs, emotion_model
+        gc.collect()
 
         return {
             "text": text_str,
@@ -103,4 +99,5 @@ class SentimentEmotionPredictor:
             "emotion_scores": {l: round(float(p), 4) for l, p in zip(EMOTION_LABELS, e_probs)},
             "attention": attention_scores
         }
+
 
