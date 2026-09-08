@@ -30,7 +30,13 @@ class SentimentEmotionPredictor:
 
     def load_sentiment_model(self):
         print(f"Loading & Quantizing Sentiment Model (INT8) from '{self.sentiment_path}'...")
-        raw = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
+        try:
+            raw = AutoModelForSequenceClassification.from_pretrained(
+                self.sentiment_path, attn_implementation="eager"
+            )
+        except Exception:
+            raw = AutoModelForSequenceClassification.from_pretrained(self.sentiment_path)
+            
         model = torch.quantization.quantize_dynamic(
             raw, {torch.nn.Linear}, dtype=torch.qint8
         )
@@ -67,15 +73,22 @@ class SentimentEmotionPredictor:
         s_probs = F.softmax(s_outputs.logits, dim=-1)[0]
         s_idx = int(torch.argmax(s_probs).item())
 
-        attn = s_outputs.attentions[-1].mean(dim=1).squeeze(0)[0, :]
         tokens = tokenizer.convert_ids_to_tokens(inputs['input_ids'][0])
-
         attention_scores = []
-        for tok, score in zip(tokens, attn):
-            if tok not in ['<s>', '</s>', '<pad>']:
-                clean_tok = tok.replace(' ', '') if tok.startswith(' ') else tok
-                if clean_tok:
-                    attention_scores.append({'word': clean_tok, 'score': round(float(score), 4)})
+
+        if s_outputs.attentions and len(s_outputs.attentions) > 0:
+            attn = s_outputs.attentions[-1].mean(dim=1).squeeze(0)[0, :]
+            for tok, score in zip(tokens, attn):
+                if tok not in ['<s>', '</s>', '<pad>']:
+                    clean_tok = tok.replace(' ', '') if tok.startswith(' ') else tok
+                    if clean_tok:
+                        attention_scores.append({'word': clean_tok, 'score': round(float(score), 4)})
+        else:
+            for tok in tokens:
+                if tok not in ['<s>', '</s>', '<pad>']:
+                    clean_tok = tok.replace(' ', '') if tok.startswith(' ') else tok
+                    if clean_tok:
+                        attention_scores.append({'word': clean_tok, 'score': 0.1})
 
         del s_outputs, sentiment_model
         gc.collect()
